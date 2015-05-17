@@ -8,6 +8,8 @@
 #                                                                          #
 ############################################################################
 
+# TODO: find a way of setting the OS via options, but could get messy
+
 ## paratmers:
 ## machine name (required)
 ## CPU (number of cores)
@@ -20,7 +22,7 @@
 
 phelp() {
 	echo "  Script for automatic Virtual Machine creation for ESX"
-	echo "  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s>"
+	echo "  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-h>"
 	echo "  -n: Name of VM (required)"
 	echo "  -l: VM Network to connect (required)"
 	echo "  -d: datastore (required - case sensitive)"
@@ -28,6 +30,7 @@ phelp() {
 	echo "  -i: location of an ISO image (optional)"
 	echo "  -r: RAM size in MB"
 	echo "  -s: Disk size in GB"
+	echo "  -h: This help screen"
 	echo
 	echo "  Default values are: CPU: 2, RAM: 512MB, HDD-SIZE: 10GB"
 	echo
@@ -42,7 +45,7 @@ SIZE=10
 ISO=""
 FLAG=true
 ERR=false
-
+NICS=1
 
 # Error checking will take place as well
 # the NAME has to be filled out (i.e. the $NAME variable needs to exist)
@@ -51,7 +54,7 @@ ERR=false
 # The HDD-size has to be an integer and has to be greater than 0.
 # If the ISO parameter is added, we are checking for an actual .iso extension
 
-while getopts n:c:i:r:s:e:l:d: option
+while getopts n:c:i:r:s:e:l:d:h: option
 do
   case $option in
    n)
@@ -107,8 +110,9 @@ do
 	;;
    e)
 	## Logic code goes here for Ethernet number
+	NICS==${OPTARG}
 	;;
-   
+	## TODO: This might not be needed isnce firewalls don't PXE install
    l)
 	VMNETWORK=${OPTARG}
 	FLAG=false;
@@ -126,7 +130,10 @@ do
 	  MSG="$MSG | Please make sure to enter a valid case sensitive datastore name."
 	fi
 	;;
-   	                                                          
+
+   h)
+	phelp; exit 1;;
+ 
    \?) echo "Unknown option: -$OPTARG" >&2; phelp; exit 1;;
         :) echo "Missing option argument for -$OPTARG" >&2; phelp; exit 1;;
         *) echo "Unimplimented option: -$OPTARG" >&2; phelp; exit 1;;

@@ -204,9 +204,10 @@ ethernet0.generatedAddressOffset = "0"
 guestOS = "other26xlinux-64"
 EOF
 
-#Adding Virtual Machine to VM register - modify your path accordingly!!
+## Adding Virtual Machine to VM register - modify your path accordingly!!
 MYVM=`vim-cmd solo/registervm /vmfs/volumes/${DATASTORE}/${NAME}/${NAME}.vmx`
-#Powering up virtual machine:
+
+## Powering up virtual machine:
 vim-cmd vmsvc/power.on $MYVM
 
 echo "The Virtual Machine is now setup & the VM has been started up. Your have the following configuration:"

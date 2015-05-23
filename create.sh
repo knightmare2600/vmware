@@ -5,10 +5,12 @@
 # Created 16 May 2015 Tamas Piros     Initial pull from github             #
 # Updated 17 May 2015 robertmc        Add option for VM Network & num NICS #
 # Updated 17 May 2015 robertmc        Add option for datastore too         #
+# Updated 23 May 2015 robertmc        Fix typo & make SCSI bus lsisas1068  #
 #                                                                          #
 ############################################################################
 
 # TODO: find a way of setting the OS via options, but could get messy
+# TODO: scsi0.virtualDev = "lsilogic|lsisas1068" can be a command line option
 
 ## paratmers:
 ## machine name (required)
@@ -112,7 +114,7 @@ do
 	## Logic code goes here for Ethernet number
 	NICS==${OPTARG}
 	;;
-	## TODO: This might not be needed isnce firewalls don't PXE install
+	## TODO: This might not be needed since firewalls don't PXE install
    l)
 	VMNETWORK=${OPTARG}
 	FLAG=false;
@@ -159,7 +161,7 @@ fi
 mkdir /vmfs/volumes/${DATASTORE}/${NAME}
 
 #Creating the actual Virtual Disk file (the HDD) with vmkfstools
-vmkfstools -c "${SIZE}"G -a lsilogic /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmdk
+vmkfstools -c "${SIZE}"G /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmdk
 
 # Creating the config file
 touch /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmx
@@ -175,7 +177,7 @@ floppy0.present = "FALSE"
 numvcpus = "${CPU}"
 scsi0.present = "TRUE"
 scsi0.sharedBus = "none"
-scsi0.virtualDev = "lsilogic"
+scsi0.virtualDev = "lsisas1068"
 memsize = "${RAM}"
 scsi0:0.present = "TRUE"
 scsi0:0.fileName = "${NAME}.vmdk"
@@ -204,10 +206,9 @@ ethernet0.generatedAddressOffset = "0"
 guestOS = "other26xlinux-64"
 EOF
 
-## Adding Virtual Machine to VM register - modify your path accordingly!!
+#Adding Virtual Machine to VM register - modify your path accordingly!!
 MYVM=`vim-cmd solo/registervm /vmfs/volumes/${DATASTORE}/${NAME}/${NAME}.vmx`
-
-## Powering up virtual machine:
+#Powering up virtual machine:
 vim-cmd vmsvc/power.on $MYVM
 
 echo "The Virtual Machine is now setup & the VM has been started up. Your have the following configuration:"

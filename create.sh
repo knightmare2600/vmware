@@ -6,6 +6,7 @@
 # Updated 17 May 2015 robertmc        Add option for VM Network & num NICS #
 # Updated 17 May 2015 robertmc        Add option for datastore too         #
 # Updated 23 May 2015 robertmc        Fix typo & make SCSI bus lsisas1068  #
+# Updated 23 May 2015 robertmc        Add 50ms delay to BIOS for slow LANs #
 #                                                                          #
 ############################################################################
 
@@ -204,6 +205,7 @@ ethernet0.virtualDev = "e1000"
 ethernet0.networkName = "${VMNETWORK}"
 ethernet0.generatedAddressOffset = "0"
 guestOS = "other26xlinux-64"
+bios.bootDelay = "50"
 EOF
 
 #Adding Virtual Machine to VM register - modify your path accordingly!!

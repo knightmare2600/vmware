@@ -7,6 +7,8 @@
 # Updated 17 May 2015 robertmc        Add option for datastore too         #
 # Updated 23 May 2015 robertmc        Fix typo & make SCSI bus lsisas1068  #
 # Updated 23 May 2015 robertmc        Add 50ms delay to BIOS for slow LANs #
+# Updated 24 May 2015 robertmc        NIC type, fix error checking logic & #
+#                                     tidy code indentation again          #
 #                                                                          #
 ############################################################################
 
@@ -15,17 +17,19 @@
 
 ## paratmers:
 ## machine name (required)
+## VM Network to attach NIC to
+## Datastore to use (required)
 ## CPU (number of cores)
 ## RAM (memory size in MB)
 ## HDD Disk size (in GB)
 ## ISO (Location of ISO image, optional)
-## VM Netowrk to attach NIC to
+## Type of NIC to use (optional)
 
-##default params: CPU: 2, RAM: 512MB, DISKSIZE: 10GB, ISO: 'blank'
+## Default parameters: 1 CPU, 512MB RAM, 10GB HDD, Ethernet e1000, ISO: 'blank'
 
 phelp() {
 	echo "  Script for automatic Virtual Machine creation for ESX"
-	echo "  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-h>"
+	echo "  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-h>"
 	echo "  -n: Name of VM (required)"
 	echo "  -l: VM Network to connect (required)"
 	echo "  -d: datastore (required - case sensitive)"
@@ -33,11 +37,12 @@ phelp() {
 	echo "  -i: location of an ISO image (optional)"
 	echo "  -r: RAM size in MB"
 	echo "  -s: Disk size in GB"
+	echo "  -e: Ethernet Type [e1000 | vmxnet | vlance]"
 	echo "  -h: This help screen"
 	echo
-	echo "  Default values are: CPU: 2, RAM: 512MB, HDD-SIZE: 10GB"
+	echo "  Default values are: 1 CPU, 512MB RAM, 10GB HDD, e1000 Adapter"
 	echo
-	echo "  e.g. create.sh -n TestVM -l 'VM Network' -d Singledisk_1 -c 1 -r 1024 -s 10"
+	echo "  e.g. create.sh -n TestVM -l 'VM Network' -d Singledisk_1 -c 1 -r 1024 -s 10 -e vmxnet"
 	echo
 }
 
@@ -48,7 +53,7 @@ SIZE=10
 ISO=""
 FLAG=true
 ERR=false
-NICS=1
+NICTYPE=e1000
 
 # Error checking will take place as well
 # the NAME has to be filled out (i.e. the $NAME variable needs to exist)
@@ -112,14 +117,18 @@ do
 	fi
 	;;
    e)
-	## Logic code goes here for Ethernet number
-	NICS==${OPTARG}
+	## Logic code goes here for Ethernet type: e1000, vmxnet, vlance
+	NICTYPE=${OPTARG}
+	FLAG=false;
+	if [ -z $NICTYPE ]; then
+	  ERR=true
+	  MSG="$MSG | Please make sure to enter a valid ethernet adapter type."
+	fi
 	;;
-	## TODO: This might not be needed since firewalls don't PXE install
    l)
 	VMNETWORK=${OPTARG}
 	FLAG=false;
-	if [ -z $NAME ]; then
+	if [ -z '$VMNETWORK' ]; then
 	  ERR=true
 	  MSG="$MSG | Please make sure to enter a valid VM Network name."
 	fi
@@ -128,7 +137,7 @@ do
    d)
 	DATASTORE=${OPTARG}
 	FLAG=false;
-	if [ -z $NAME ]; then
+	if [ -z '$DATASTORE' ]; then
 	  ERR=true
 	  MSG="$MSG | Please make sure to enter a valid case sensitive datastore name."
 	fi
@@ -201,27 +210,32 @@ pciBridge7.virtualDev = "pcieRootPort"
 pciBridge7.functions = "8"
 ethernet0.pciSlotNumber = "32"
 ethernet0.present = "TRUE"
-ethernet0.virtualDev = "e1000"
+ethernet0.virtualDev = "${NICTYPE}"
 ethernet0.networkName = "${VMNETWORK}"
 ethernet0.generatedAddressOffset = "0"
 guestOS = "other26xlinux-64"
 bios.bootDelay = "50"
 EOF
 
-#Adding Virtual Machine to VM register - modify your path accordingly!!
+## Adding Virtual Machine to VM register - modify your path accordingly!!
 MYVM=`vim-cmd solo/registervm /vmfs/volumes/${DATASTORE}/${NAME}/${NAME}.vmx`
-#Powering up virtual machine:
+
+## Powering up virtual machine:
 vim-cmd vmsvc/power.on $MYVM
 
+echo
 echo "The Virtual Machine is now setup & the VM has been started up. Your have the following configuration:"
-echo "Name: ${NAME}"
-echo "CPU: ${CPU}"
-echo "RAM: ${RAM}"
-echo "HDD-size: ${SIZE}"
+echo "Name......: ${NAME}"
+echo "Datastore.: ${DATASTORE}"
+echo "CPU:......: ${CPU}"
+echo "RAM (MB)..: ${RAM}"
+echo "HDD-size..: ${SIZE}"
+echo "Network...: ${VMNETWORK}"
 if [ -n "$ISO" ]; then
 	echo "ISO: ${ISO}"
 else
 	echo "No ISO added."
 fi
 echo "Thank you."
+echo
 exit

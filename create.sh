@@ -9,10 +9,19 @@
 # Updated 23 May 2015 robertmc        Add 50ms delay to BIOS for slow LANs #
 # Updated 24 May 2015 robertmc        NIC type, fix error checking logic & #
 #                                     tidy code indentation again          #
+# Updated 06 Jun 2015 robertmc        Add guest OS parameter. But limit it #
+#                                     due to sheer volume of options       #
 #                                                                          #
 ############################################################################
 
-# TODO: find a way of setting the OS via options, but could get messy
+#-----------------: A WORD ON OS SUPPORT IN THE VMX FILE :-----------------#
+#                                                                          #
+# There's a text file containing all the OS options included in this repo, #
+# but you can run strings on /bin/hostd too.  I'm using only OS editions I #
+# use (2008R2, 2012, Win7, Win8, Ubuntu, RHEL & ESX). Feel free to update  #
+# yours, but the logic code would be a nightmare!                          #
+#--------------------------------------------------------------------------#
+
 # TODO: scsi0.virtualDev = "lsilogic|lsisas1068" can be a command line option
 
 ## paratmers:
@@ -24,12 +33,14 @@
 ## HDD Disk size (in GB)
 ## ISO (Location of ISO image, optional)
 ## Type of NIC to use (optional)
+## Guest OS type (optional)
 
-## Default parameters: 1 CPU, 512MB RAM, 10GB HDD, Ethernet e1000, ISO: 'blank'
+## Default parameters:
+## 1 CPU, 512MB RAM, 10GB HDD, e1000 NIC, ISO: 'blank', GuestOS Ubuntu 64 Bit
 
 phelp() {
 	echo "  Script for automatic Virtual Machine creation for ESX"
-	echo "  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-h>"
+	echo "  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-h>"
 	echo "  -n: Name of VM (required)"
 	echo "  -l: VM Network to connect (required)"
 	echo "  -d: datastore (required - case sensitive)"
@@ -38,31 +49,33 @@ phelp() {
 	echo "  -r: RAM size in MB"
 	echo "  -s: Disk size in GB"
 	echo "  -e: Ethernet Type [e1000 | vmxnet | vlance]"
+	echo "  -g: GuestOS [ win7 | 2008r2 | win8 | 2012r2 | ubuntu | esx5 | esx6 ]"
 	echo "  -h: This help screen"
 	echo
-	echo "  Default values are: 1 CPU, 512MB RAM, 10GB HDD, e1000 Adapter"
+	echo "  Default values are: 1 CPU, 512MB RAM, 10GB HDD, e1000 Adapter on Ubuntu Guest"
 	echo
 	echo "  e.g. create.sh -n TestVM -l 'VM Network' -d Singledisk_1 -c 1 -r 1024 -s 10 -e vmxnet"
 	echo
 }
 
 ## Setting up some of the default variables
-CPU=2
+CPU=1
 RAM=512
 SIZE=10
 ISO=""
 FLAG=true
 ERR=false
 NICTYPE=e1000
+GUESTOS=ubuntu
 
-# Error checking will take place as well
-# the NAME has to be filled out (i.e. the $NAME variable needs to exist)
-# The CPU has to be an integer and it has to be between 1 and 32. Modify the if statement if you want to give more than 32 cores to your Virtual Machine, and also email me pls :)
-# You need to assign more than 1 MB of ram, and of course RAM has to be an integer as well
-# The HDD-size has to be an integer and has to be greater than 0.
-# If the ISO parameter is added, we are checking for an actual .iso extension
+## Error checking will take place as well
+## the NAME has to be filled out (i.e. the $NAME variable needs to exist)
+## The CPU has to be an integer and it has to be between 1 and 32. Modify the if statement if you want to give more than 32 cores to your Virtual Machine, and also email me pls :)
+## You need to assign more than 1 MB of ram, and of course RAM has to be an integer as well
+## The HDD-size has to be an integer and has to be greater than 0.
+## If the ISO parameter is added, we are checking for an actual .iso extension
 
-while getopts n:c:i:r:s:e:l:d:h: option
+while getopts n:c:i:r:s:l:e:d:g:h: option
 do
   case $option in
    n)
@@ -132,6 +145,40 @@ do
 	  ERR=true
 	  MSG="$MSG | Please make sure to enter a valid VM Network name."
 	fi
+	;;
+
+   g)
+	GUESTOS=${OPTARG}
+	FLAG=false;
+	if [ -z '$GUESTOS' ]; then
+	  ERR=true
+	  MSG="$MSG | Please make sure to enter a valid Guest OS name."
+	elif [ "$GUESTOS" == "win7" ]; then
+	  GUESTOS=windows7_64Guest
+          FLAG=false
+	elif [ "$GUESTOS" == "2008r2" ]; then
+	  GUESTOS=windows7srv-64
+          FLAG=false
+	elif [ "$GUESTOS" == "win8" ]; then
+	  GUESTOS=windows8_64Guest
+          FLAG=false
+	elif [ "$GUESTOS" == "2012r2" ]; then
+	  GUESTOS=windows8Server64Guest
+          FLAG=false
+	elif [ "$GUESTOS" == "ubuntu" ]; then
+	  GUESTOS=ubuntu64Guest
+          FLAG=false
+	elif [ "$GUESTOS" == "esx5" ]; then
+	  GUESTOS=vmkernel5Guest
+          FLAG=false
+	elif [ "$GUESTOS" == "esx6" ]; then
+	  GUESTOS=vmkernel6Guest
+          FLAG=false
+	## copy the 3 lines above to add in more guest support as needed
+	else
+	  ERR=true
+	  MSG="$MSG | Please make sure to enter a valid Guest OS name."
+        fi
 	;;
 
    d)
@@ -213,7 +260,7 @@ ethernet0.present = "TRUE"
 ethernet0.virtualDev = "${NICTYPE}"
 ethernet0.networkName = "${VMNETWORK}"
 ethernet0.generatedAddressOffset = "0"
-guestOS = "other26xlinux-64"
+guestOS = "${GUESTOS}"
 bios.bootDelay = "50"
 EOF
 

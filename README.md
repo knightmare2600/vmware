@@ -6,8 +6,8 @@ This repo contains scripts and tools for working with VMWare ESX 5.x and 6.x it 
 Copy the `create.sh` script to a persistent location on your ESX host. I've found `/vmfs/volumes` is a good start. Then run the script for help.
 
 Examples:
-```
-  Script for automatic Virtual Machine creation for ESX
+
+```  Script for automatic Virtual Machine creation for ESX
   Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-h>
   -n: Name of VM (required)
   -l: VM Network to connect (required)

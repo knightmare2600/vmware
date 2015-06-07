@@ -166,7 +166,7 @@ do
           FLAG=false
 	  HWVER=9
 	elif [ "$GUESTOS" == "2012r2" ]; then
-	  GUESTOS=windows8Server64Guest
+	  GUESTOS=windows8srv-64
           FLAG=false
 	  HWVER=9
 	elif [ "$GUESTOS" == "ubuntu" ]; then

@@ -11,6 +11,7 @@
 #                                     tidy code indentation again          #
 # Updated 06 Jun 2015 robertmc        Add guest OS parameter. But limit it #
 #                                     due to sheer volume of options       #
+# Updated 07 Jun 2015 robertmc        Bump HW version for W8 & 2012 VMs    #
 #                                                                          #
 ############################################################################
 
@@ -36,7 +37,7 @@
 ## Guest OS type (optional)
 
 ## Default parameters:
-## 1 CPU, 512MB RAM, 10GB HDD, e1000 NIC, ISO: 'blank', GuestOS Ubuntu 64 Bit
+## 1 CPU, 512MB RAM, 10GB HDD, e1000 NIC, ISO: 'blank', GuestOS: Ubuntu 64 Bit
 
 phelp() {
 	echo "  Script for automatic Virtual Machine creation for ESX"
@@ -67,6 +68,7 @@ FLAG=true
 ERR=false
 NICTYPE=e1000
 GUESTOS=ubuntu
+HWVER=8
 
 ## Error checking will take place as well
 ## the NAME has to be filled out (i.e. the $NAME variable needs to exist)
@@ -154,17 +156,19 @@ do
 	  ERR=true
 	  MSG="$MSG | Please make sure to enter a valid Guest OS name."
 	elif [ "$GUESTOS" == "win7" ]; then
-	  GUESTOS=windows7_64Guest
+	  GUESTOS=windows7-64
           FLAG=false
 	elif [ "$GUESTOS" == "2008r2" ]; then
 	  GUESTOS=windows7srv-64
           FLAG=false
 	elif [ "$GUESTOS" == "win8" ]; then
-	  GUESTOS=windows8_64Guest
+	  GUESTOS=windows8-64
           FLAG=false
+	  HWVER=9
 	elif [ "$GUESTOS" == "2012r2" ]; then
 	  GUESTOS=windows8Server64Guest
           FLAG=false
+	  HWVER=9
 	elif [ "$GUESTOS" == "ubuntu" ]; then
 	  GUESTOS=ubuntu64Guest
           FLAG=false
@@ -226,7 +230,7 @@ touch /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmx
 #writing information into the configuration file
 cat << EOF > /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmx
 
-config.version = "8"
+config.version = "9"
 virtualHW.version = "7"
 vmci0.present = "TRUE"
 displayName = "${NAME}"
@@ -266,6 +270,10 @@ EOF
 
 ## Adding Virtual Machine to VM register - modify your path accordingly!!
 MYVM=`vim-cmd solo/registervm /vmfs/volumes/${DATASTORE}/${NAME}/${NAME}.vmx`
+
+## Upgrade the hardware version, but stick with HW version 8 since 9+ expects
+## the WebUI VSpehre client (urgh!) except if it's Win8 or 2012.
+vim-cmd vmsvc/upgrade $MYVM vmx-0$HWVER
 
 ## Powering up virtual machine:
 vim-cmd vmsvc/power.on $MYVM

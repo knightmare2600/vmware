@@ -22,7 +22,8 @@ Examples:
 
   Default values are: 1 CPU, 512MB RAM, 10GB HDD, e1000 Adapter on Ubuntu Guest
 
-  e.g. create.sh -n TestVM -l 'VM Network' -d Singledisk_1 -c 1 -r 1024 -s 10 -e vmxnet```
+  e.g. create.sh -n TestVM -l 'VM Network' -d Singledisk_1 -c 1 -r 1024 -s 10 -e vmxnet
+```
 
 The script will automatically upgrade the hardware to a version compatible with the Guest OS.
 

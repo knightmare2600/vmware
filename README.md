@@ -7,7 +7,8 @@ Copy the `create.sh` script to a persistent location on your ESX host. I've foun
 
 Examples:
 
-```  Script for automatic Virtual Machine creation for ESX
+```
+Script for automatic Virtual Machine creation for ESX
   Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-h>
   -n: Name of VM (required)
   -l: VM Network to connect (required)

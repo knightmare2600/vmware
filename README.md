@@ -9,7 +9,7 @@ Examples:
 
 ```
 Script for automatic Virtual Machine creation for ESX
-  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-h>
+  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-a|-h>
   -n: Name of VM (required)
   -l: VM Network to connect (required)
   -d: datastore (required - case sensitive)
@@ -18,6 +18,7 @@ Script for automatic Virtual Machine creation for ESX
   -r: RAM size in MB
   -s: Disk size in GB
   -e: Ethernet Type [e1000 | vmxnet | vlance]
+  -a: SCSI Adapter type [ buslogic | lsilogic| lsisas1068 ]
   -g: GuestOS [ win7 | 2008r2 | win8 | 2012r2 | ubuntu | esx5 | esx6 ]
   -h: This help screen
 

@@ -14,6 +14,8 @@
 # Updated 07 Jun 2015 robertmc        Bump HW version for W8 & 2012 VMs    #
 # Updated 08 Jun 2015 robertmc        Validate Datastore before trying to  #
 #                                     write to it                          #
+# Updated 08 Jun 2015 robertmc        Offer SSCI controllers but keep most #
+#                                     compatible lsisas1068 as default     #
 #                                                                          #
 ############################################################################
 
@@ -25,7 +27,6 @@
 # yours, but the logic code would be a nightmare!                          #
 #--------------------------------------------------------------------------#
 
-# TODO: scsi0.virtualDev = "lsilogic|lsisas1068" can be a command line option
 # TODO: Add option to print out ethernet MAC address for those who PXE boot
 
 ## paratmers:
@@ -44,7 +45,7 @@
 
 phelp() {
 	echo "  Script for automatic Virtual Machine creation for ESX"
-	echo "  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-h>"
+	echo "  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-a|-h>"
 	echo "  -n: Name of VM (required)"
 	echo "  -l: VM Network to connect (required)"
 	echo "  -d: datastore (required - case sensitive)"
@@ -54,9 +55,10 @@ phelp() {
 	echo "  -s: Disk size in GB"
 	echo "  -e: Ethernet Type [e1000 | vmxnet | vlance]"
 	echo "  -g: GuestOS [ win7 | 2008r2 | win8 | 2012r2 | ubuntu | esx5 | esx6 ]"
+	echo "  -a: SCSI Adapter type [ buslogic | lsilogic| lsisas1068 ]"
 	echo "  -h: This help screen"
 	echo
-	echo "  Default values are: 1 CPU, 512MB RAM, 10GB HDD, e1000 Adapter on Ubuntu Guest"
+	echo "  Default values are: 1 CPU, 512MB RAM, 10GB HDD, e1000 LAN, LSI SAS SCSI on an Ubuntu Guest"
 	echo
 	echo "  e.g. create.sh -n TestVM -l 'VM Network' -d Singledisk_1 -c 1 -r 1024 -s 10 -e vmxnet"
 	echo
@@ -71,7 +73,8 @@ FLAG=true
 ERR=false
 NICTYPE=e1000
 GUESTOS=ubuntu
-HWVER=8
+HWVER=08 ## Can be 08-11 it goes up to 11!
+SCSIADAPTER=lsisas1068
 
 ## Error checking will take place as well
 ## the NAME has to be filled out (i.e. the $NAME variable needs to exist)
@@ -80,7 +83,7 @@ HWVER=8
 ## The HDD-size has to be an integer and has to be greater than 0.
 ## If the ISO parameter is added, we are checking for an actual .iso extension
 
-while getopts n:c:i:r:s:l:e:d:g:h: option
+while getopts :h:n:c:i:r:s:l:e:d:a:g: option
 do
   case $option in
    n)
@@ -152,6 +155,15 @@ do
 	fi
 	;;
 
+   a)
+	SCSIADAPTER=${OPTARG}
+	FLAG=false;
+	if [ -z '$SCSIADAPTER' ]; then
+	  ERR=true
+	  MSG="$MSG | Please make sure to enter a valid SCSI Bus Adapter"
+	fi
+	;;
+
    g)
 	GUESTOS=${OPTARG}
 	FLAG=false;
@@ -167,11 +179,11 @@ do
 	elif [ "$GUESTOS" == "win8" ]; then
 	  GUESTOS=windows8-64
           FLAG=false
-	  HWVER=9
+	  HWVER=09
 	elif [ "$GUESTOS" == "2012r2" ]; then
 	  GUESTOS=windows8srv-64
           FLAG=false
-	  HWVER=9
+	  HWVER=09
 	elif [ "$GUESTOS" == "ubuntu" ]; then
 	  GUESTOS=ubuntu64Guest
           FLAG=false
@@ -195,9 +207,9 @@ do
 	  ERR=true
 	  MSG="$MSG | Please make sure to enter a valid case sensitive datastore name."
 	elif [ ! -d "/vmfs/volumes/$DATASTORE" ]; then
-	  VALIDDATASTORES=`ls -l /vmfs/volumes/ | grep ^l | awk '{ print $9 }'`
+	  DATASTORES=`ls -l /vmfs/volumes/ | grep ^l | awk '{ print $9 }'`
 	  ERR=true
-	  MSG="Datastore $DATASTORE does not exist in /vmfs/volumes/ Please check the case sensitive name. Valid datastores are: $VALIDDATASTORES"
+	  MSG="Datastore not found in /vmfs/volumes/ Please check the case sensitive name. Valid datastores are: $DATASTORES"
 	fi
 	;;
 
@@ -245,7 +257,7 @@ floppy0.present = "FALSE"
 numvcpus = "${CPU}"
 scsi0.present = "TRUE"
 scsi0.sharedBus = "none"
-scsi0.virtualDev = "lsisas1068"
+scsi0.virtualDev = "${SCSIDAPTER}"
 memsize = "${RAM}"
 scsi0:0.present = "TRUE"
 scsi0:0.fileName = "${NAME}.vmdk"
@@ -280,7 +292,7 @@ MYVM=`vim-cmd solo/registervm /vmfs/volumes/${DATASTORE}/${NAME}/${NAME}.vmx`
 
 ## Upgrade the hardware version, but stick with HW version 8 since 9+ expects
 ## the WebUI VSpehre client (urgh!) except if it's Win8 or 2012.
-vim-cmd vmsvc/upgrade $MYVM vmx-0$HWVER
+vim-cmd vmsvc/upgrade $MYVM vmx-$HWVER
 
 ## Powering up virtual machine:
 vim-cmd vmsvc/power.on $MYVM

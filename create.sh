@@ -24,6 +24,7 @@
 #--------------------------------------------------------------------------#
 
 # TODO: scsi0.virtualDev = "lsilogic|lsisas1068" can be a command line option
+# TODO: Add option to print out ethernet MAC address for those who PXE boot
 
 ## paratmers:
 ## machine name (required)
@@ -204,30 +205,30 @@ do
 done
 
 if $FLAG; then
-	echo "You need to at least specify the name of the machine with the -n parameter."
-	exit 1
+  echo "You need to at least specify the name of the machine with the -n parameter."
+  exit 1
 fi
 
 if $ERR; then
-	echo $MSG
-	exit 1
+  echo $MSG
+  exit 1
 fi
 
 if [ -d "$NAME" ]; then
-	echo "Directory - ${NAME} already exists, can't recreate it."
-	exit
+  echo "Directory - ${NAME} already exists, can't recreate it."
+  exit
 fi
 
-#Creating the folder for the Virtual Machine
+## Creating the folder for the Virtual Machine
 mkdir /vmfs/volumes/${DATASTORE}/${NAME}
 
-#Creating the actual Virtual Disk file (the HDD) with vmkfstools
+## Creating the actual Virtual Disk file (the HDD) with vmkfstools
 vmkfstools -c "${SIZE}"G /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmdk
 
-# Creating the config file
+## Creating the config file
 touch /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmx
 
-#writing information into the configuration file
+## Writing information into the configuration file
 cat << EOF > /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmx
 
 config.version = "9"

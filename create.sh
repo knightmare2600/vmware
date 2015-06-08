@@ -12,6 +12,8 @@
 # Updated 06 Jun 2015 robertmc        Add guest OS parameter. But limit it #
 #                                     due to sheer volume of options       #
 # Updated 07 Jun 2015 robertmc        Bump HW version for W8 & 2012 VMs    #
+# Updated 08 Jun 2015 robertmc        Validate Datastore before trying to  #
+#                                     write to it                          #
 #                                                                          #
 ############################################################################
 
@@ -192,6 +194,10 @@ do
 	if [ -z '$DATASTORE' ]; then
 	  ERR=true
 	  MSG="$MSG | Please make sure to enter a valid case sensitive datastore name."
+	elif [ ! -d "/vmfs/volumes/$DATASTORE" ]; then
+	  VALIDDATASTORES=`ls -l /vmfs/volumes/ | grep ^l | awk '{ print $9 }'`
+	  ERR=true
+	  MSG="Datastore $DATASTORE does not exist in /vmfs/volumes/ Please check the case sensitive name. Valid datastores are: $VALIDDATASTORES"
 	fi
 	;;
 

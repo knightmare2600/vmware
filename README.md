@@ -20,6 +20,7 @@ Script for automatic Virtual Machine creation for ESX
   -e: Ethernet Type [e1000 | vmxnet | vlance]
   -a: SCSI Adapter type [ buslogic | lsilogic| lsisas1068 ]
   -g: GuestOS [ win7 | 2008r2 | win8 | 2012r2 | ubuntu | esx5 | esx6 ]
+  -a: SCSI Adapter type [ buslogic | lsilogic| lsisas1068 ]
   -h: This help screen
 
   Default values are: 1 CPU, 512MB RAM, 10GB HDD, e1000 Adapter on Ubuntu Guest

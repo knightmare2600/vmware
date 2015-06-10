@@ -9,24 +9,24 @@ Examples:
 
 ```
 Script for automatic Virtual Machine creation for ESX
- Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-a|-v|-h>
- -n: Name of VM (required)
- -l: VM Network to connect (required)
- -d: datastore (required - case sensitive)
- -c: Number of virtual CPUs
- -i: location of an ISO image (optional)
- -r: RAM size in MB
- -s: Disk size in GB
- -e: Number of Ethernet adapters [max: 9]
- -v: Virtual Ethernet card type [e1000 | vmxnet | vlance]
- -a: SCSI Adapter type [ buslogic | lsilogic| lsisas1068 ]
- -g: GuestOS [ win7 | 2008r2 | win8 | 2012r2 | ubuntu | esx5 | esx6 ]
- -a: SCSI Adapter type [ buslogic | lsilogic| lsisas1068 ]
- -h: This help screen
+Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-a|-v|-h>
+-n: Name of VM (required)
+-l: VM Network to connect (required)
+-d: datastore (required - case sensitive)
+-c: Number of virtual CPUs
+-i: location of an ISO image (optional)
+-r: RAM size in MB
+-s: Disk size in GB
+-e: Number of Ethernet adapters [max: 9]
+-v: Virtual Ethernet card type [e1000 | vmxnet | vlance]
+-a: SCSI Adapter type [ buslogic | lsilogic| lsisas1068 ]
+-g: GuestOS [ win7 | 2008r2 | win8 | 2012r2 | ubuntu | esx5 | esx6 ]
+-a: SCSI Adapter type [ buslogic | lsilogic| lsisas1068 ]
+-h: This help screen
 
- Default values are: 1 CPU, 512MB RAM, 10GB HDD, 1 x e1000 Adapter on Ubuntu Guest
+Default values are: 1 CPU, 512MB RAM, 10GB HDD, 1 x e1000 Adapter on Ubuntu Guest
 
- e.g. create.sh -n MyVM -l 'VM Network' -d Singledisk_1 -c 1 -r 1024 -s 10 -e 2 -g win8 -v vmxnet
+e.g. create.sh -n MyVM -l 'Protected' -d Datastore1 -c 1 -r 1024 -s 5 -e 2 -g win8 -v vmxnet
 ```
 
 The script will automatically upgrade the hardware to a version compatible with the Guest OS.

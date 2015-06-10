@@ -26,7 +26,7 @@ Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-a|-v|-h>
 
 Default values are: 1 CPU, 512MB RAM, 10GB HDD, 1 x e1000 Adapter on Ubuntu Guest
 
-e.g. create.sh -n MyVM -l 'Protected' -d Datastore1 -c 1 -r 1024 -s 5 -e 2 -g win8 -v vmxnet
+e.g. create.sh -n MyVM -l 'Protected' -d Store1 -c 1 -r 1024 -s 5 -e 2 -g win8 -v vmxnet
 ```
 
 The script will automatically upgrade the hardware to a version compatible with the Guest OS.

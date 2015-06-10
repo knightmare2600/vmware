@@ -16,6 +16,7 @@
 #                                     write to it                          #
 # Updated 08 Jun 2015 robertmc        Offer SSCI controllers but keep most #
 #                                     compatible lsisas1068 as default     #
+# Updated 10 Jun 2015 robertmc        Allow 1-9 NICs at build time         #
 #                                                                          #
 ############################################################################
 
@@ -28,6 +29,7 @@
 #--------------------------------------------------------------------------#
 
 # TODO: Add option to print out ethernet MAC address for those who PXE boot
+# TODO: Maybe allow different NIC type for each adapter
 
 ## paratmers:
 ## machine name (required)
@@ -39,13 +41,14 @@
 ## ISO (Location of ISO image, optional)
 ## Type of NIC to use (optional)
 ## Guest OS type (optional)
+## Number of NICs (optional)
 
 ## Default parameters:
-## 1 CPU, 512MB RAM, 10GB HDD, e1000 NIC, ISO: 'blank', GuestOS: Ubuntu 64 Bit
+## 1 CPU, 512MB RAM, 10GB HDD, 1 x e1000 NIC, ISO: 'blank', GuestOS: Ubuntu 64 Bit
 
 phelp() {
 	echo "  Script for automatic Virtual Machine creation for ESX"
-	echo "  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-a|-h>"
+	echo "  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-a|-v|-h>"
 	echo "  -n: Name of VM (required)"
 	echo "  -l: VM Network to connect (required)"
 	echo "  -d: datastore (required - case sensitive)"
@@ -53,14 +56,15 @@ phelp() {
 	echo "  -i: location of an ISO image (optional)"
 	echo "  -r: RAM size in MB"
 	echo "  -s: Disk size in GB"
-	echo "  -e: Ethernet Type [e1000 | vmxnet | vlance]"
+	echo "  -e: Number of Ethernet adapters [max: 9]"
 	echo "  -g: GuestOS [ win7 | 2008r2 | win8 | 2012r2 | ubuntu | esx5 | esx6 ]"
 	echo "  -a: SCSI Adapter type [ buslogic | lsilogic| lsisas1068 ]"
+	echo "  -v: Virtual Ethernet card type [e1000 | vmxnet | vlance]"
 	echo "  -h: This help screen"
 	echo
-	echo "  Default values are: 1 CPU, 512MB RAM, 10GB HDD, e1000 LAN, LSI SAS SCSI on an Ubuntu Guest"
+	echo "  Default values are: 1 CPU, 512MB RAM, 10GB HDD, 1 x e1000 NIC, LSI SAS SCSI on an Ubuntu Guest"
 	echo
-	echo "  e.g. create.sh -n TestVM -l 'VM Network' -d Singledisk_1 -c 1 -r 1024 -s 10 -e vmxnet"
+	echo "  e.g. create.sh -n TestVM -l 'VM Network' -d Singledisk_1 -c 1 -r 1024 -s 10 -e 2 -v vmxnet"
 	echo
 }
 
@@ -73,17 +77,18 @@ FLAG=true
 ERR=false
 NICTYPE=e1000
 GUESTOS=ubuntu
-HWVER=08 ## Can be 08-11 it goes up to 11!
+HWVER=08 ## Can be 08-11 Hey look... it goes up to 11!
 SCSIADAPTER=lsisas1068
+NUMNICS=1
 
 ## Error checking will take place as well
 ## the NAME has to be filled out (i.e. the $NAME variable needs to exist)
-## The CPU has to be an integer and it has to be between 1 and 32. Modify the if statement if you want to give more than 32 cores to your Virtual Machine, and also email me pls :)
+## The CPU must be an integer between 1 & 32. Modify the 'if' for more than 32 cores on a VM
 ## You need to assign more than 1 MB of ram, and of course RAM has to be an integer as well
 ## The HDD-size has to be an integer and has to be greater than 0.
 ## If the ISO parameter is added, we are checking for an actual .iso extension
 
-while getopts :h:n:c:i:r:s:l:e:d:a:g: option
+while getopts :h:n:c:i:r:s:l:e:d:a:v:g: option
 do
   case $option in
    n)
@@ -137,7 +142,21 @@ do
 	  MSG="$MSG | The HDD size has to be an integer."
 	fi
 	;;
+
    e)
+	NUMNICS=${OPTARG}
+	if [ `echo "$NUMNICS" | egrep "^-?[0-9]+$"` ]; then
+	  if [ "$NUMNICS" -eq "1" ]; then
+	    ERR=true
+	    MSG="$MSG Don't be silly! If you want a single NIC, don't specify the -e parameter."
+	  fi
+	else
+	  ERR=true
+	  MSG="$MSG | Please enter a number of NICs between 2 and 9."
+	fi
+	;;
+
+   v)
 	## Logic code goes here for Ethernet type: e1000, vmxnet, vlance
 	NICTYPE=${OPTARG}
 	FLAG=false;
@@ -149,7 +168,7 @@ do
    l)
 	VMNETWORK=${OPTARG}
 	FLAG=false;
-	if [ -z '$VMNETWORK' ]; then
+	if [ -z "$VMNETWORK" ]; then
 	  ERR=true
 	  MSG="$MSG | Please make sure to enter a valid VM Network name."
 	fi
@@ -203,7 +222,7 @@ do
    d)
 	DATASTORE=${OPTARG}
 	FLAG=false;
-	if [ -z '$DATASTORE' ]; then
+	if [ -z "$DATASTORE" ]; then
 	  ERR=true
 	  MSG="$MSG | Please make sure to enter a valid case sensitive datastore name."
 	elif [ ! -d "/vmfs/volumes/$DATASTORE" ]; then
@@ -278,14 +297,40 @@ pciBridge6.functions = "8"
 pciBridge7.present = "TRUE"
 pciBridge7.virtualDev = "pcieRootPort"
 pciBridge7.functions = "8"
+guestOS = "${GUESTOS}"
+bios.bootDelay = "50"
 ethernet0.pciSlotNumber = "32"
 ethernet0.present = "TRUE"
 ethernet0.virtualDev = "${NICTYPE}"
 ethernet0.networkName = "${VMNETWORK}"
 ethernet0.generatedAddressOffset = "0"
-guestOS = "${GUESTOS}"
-bios.bootDelay = "50"
 EOF
+
+## Add the requested number of NICs to the VM. i'm not letting you add more
+## than nine because that's just silly. You can change it of course. If you
+## wonder why I didn't use vim-cmd vmsvc/devices.createnic it's because the
+## syntax didn't work for me even with unit ID 8 - 4096.
+
+## VMICs start from 0 so start at 1 to compliment the logic above which does
+## not allow user to specify less than 2 NICs 
+NIC=1
+
+while [[ "$NIC" -lt "$NUMNICS" ]] ; do
+##echo "$NIC"
+##echo "$NIC"
+## Update the VMX file. This is why I put the NICs last
+##exit 0
+
+cat << EOF >> /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmx
+ethernet${NIC}.present = "TRUE"
+ethernet${NIC}.virtualDev = "${NICTYPE}"
+ethernet${NIC}.networkName = "${VMNETWORK}"
+ethernet${NIC}.generatedAddressOffset = "0"
+EOF
+
+# Bump NIC by +1 and carry on
+NIC=`echo $(($NIC+1))`
+done
 
 ## Adding Virtual Machine to VM register - modify your path accordingly!!
 MYVM=`vim-cmd solo/registervm /vmfs/volumes/${DATASTORE}/${NAME}/${NAME}.vmx`

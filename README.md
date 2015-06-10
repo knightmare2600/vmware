@@ -9,7 +9,7 @@ Examples:
 
 ```
 Script for automatic Virtual Machine creation for ESX
-  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-a|-h>
+  Usage: ./create.sh options: -n -l -d <|-c|-i|-r|-s|-e|-g|-a|-v|-h>
   -n: Name of VM (required)
   -l: VM Network to connect (required)
   -d: datastore (required - case sensitive)
@@ -17,7 +17,8 @@ Script for automatic Virtual Machine creation for ESX
   -i: location of an ISO image (optional)
   -r: RAM size in MB
   -s: Disk size in GB
-  -e: Ethernet Type [e1000 | vmxnet | vlance]
+  -e: Number of Ethernet adapters [max: 9]
+  -v: Virtual Ethernet card type [e1000 | vmxnet | vlance]
   -a: SCSI Adapter type [ buslogic | lsilogic| lsisas1068 ]
   -g: GuestOS [ win7 | 2008r2 | win8 | 2012r2 | ubuntu | esx5 | esx6 ]
   -a: SCSI Adapter type [ buslogic | lsilogic| lsisas1068 ]
@@ -25,7 +26,7 @@ Script for automatic Virtual Machine creation for ESX
 
   Default values are: 1 CPU, 512MB RAM, 10GB HDD, e1000 Adapter on Ubuntu Guest
 
-  e.g. create.sh -n TestVM -l 'VM Network' -d Singledisk_1 -c 1 -r 1024 -s 10 -e vmxnet -g win8
+  e.g. create.sh -n TestVM -l 'VM Network' -d Singledisk_1 -c 1 -r 1024 -s 10 -e 2 -g win8 -v vmxnet
 ```
 
 The script will automatically upgrade the hardware to a version compatible with the Guest OS.
@@ -39,6 +40,8 @@ Licensed under GPLv3.
 https://github.com/tamaspiros/auto-create
 
 http://www.virtuallyghetto.com/2013/10/quick-tip-using-cli-to-upgrade-to.html
+
+http://www.doublecloud.org/2013/11/vmware-esxi-vim-cmd-command-a-quick-tutorial/
 
 ##Authors
 Created by Tamas Piros and upgraded by knightmare2600

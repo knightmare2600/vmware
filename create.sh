@@ -17,6 +17,7 @@
 # Updated 08 Jun 2015 robertmc        Offer SSCI controllers but keep most #
 #                                     compatible lsisas1068 as default     #
 # Updated 10 Jun 2015 robertmc        Allow 1-9 NICs at build time         #
+# Updated 12 Jul 2015 robertmc        Check Datastore path for existing VM #
 #                                                                          #
 ############################################################################
 
@@ -251,7 +252,7 @@ if $ERR; then
   exit 1
 fi
 
-if [ -d "$NAME" ]; then
+if [ -d "/vmfs/volumes/$DATASTORE/$NAME" ]; then
   echo "Directory - ${NAME} already exists, can't recreate it."
   exit
 fi

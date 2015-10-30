@@ -3,34 +3,21 @@
 ############################################################################
 #                                                                          #
 # Created 16 May 2015 Tamas Piros     Initial pull from github             #
-# Updated 17 May 2015 robertmc        Add option for VM Network & num NICS #
-# Updated 17 May 2015 robertmc        Add option for datastore too         #
-# Updated 23 May 2015 robertmc        Fix typo & make SCSI bus lsisas1068  #
-# Updated 23 May 2015 robertmc        Add 50ms delay to BIOS for slow LANs #
-# Updated 24 May 2015 robertmc        NIC type, fix error checking logic & #
-#                                     tidy code indentation again          #
-# Updated 06 Jun 2015 robertmc        Add guest OS parameter. But limit it #
-#                                     due to sheer volume of options       #
-# Updated 07 Jun 2015 robertmc        Bump HW version for W8 & 2012 VMs    #
-# Updated 08 Jun 2015 robertmc        Validate Datastore before trying to  #
-#                                     write to it                          #
-# Updated 08 Jun 2015 robertmc        Offer SSCI controllers but keep most #
-#                                     compatible lsisas1068 as default     #
-# Updated 10 Jun 2015 robertmc        Allow 1-9 NICs at build time         #
-# Updated 12 Jul 2015 robertmc        Check Datastore path for existing VM #
+# Updated 11 Oct 2015 robertmc        Use VMWare script as basis for Xen   #
 #                                                                          #
 ############################################################################
 
 #-----------------: A WORD ON OS SUPPORT IN THE VMX FILE :-----------------#
 #                                                                          #
 # There's a text file containing all the OS options included in this repo, #
-# but you can run strings on /bin/hostd too.  I'm using only OS editions I #
-# use (2008R2, 2012, Win7, Win8, Ubuntu, RHEL & ESX). Feel free to update  #
+# but you can run xe template-list too.  I'm using only OS editions I use  #
+# (2008R2, 2012, Win7, Win8, Ubuntu, RHEL & ESX). Feel free to update      #
 # yours, but the logic code would be a nightmare!                          #
 #--------------------------------------------------------------------------#
 
 # TODO: Add option to print out ethernet MAC address for those who PXE boot
 # TODO: Maybe allow different NIC type for each adapter
+## TODO: FIX Currently the boot order is not working, and only PXE boots by default
 
 ## paratmers:
 ## machine name (required)
@@ -47,8 +34,26 @@
 ## Default parameters:
 ## 1 CPU, 512MB RAM, 10GB HDD, 1 x e1000 NIC, ISO: 'blank', GuestOS: Ubuntu 64 Bit
 
+
+##    so VM based on Debian Wheezy 7.0 (32-bit) template, VM name is newVM
+##   change boot order boot from VM hard disk:
+##  boot on floppy (a), hard disk (c), Network (n) or CD-ROM (d)
+# default: hard disk, cd-rom, floppy
+##boot="ncd"
+
+##    xe vbd-list vm-uuid=[VM uuid] userdevice=0
+##    xe vbd-param-set uuid=[device UUID] bootable=false
+
+##    Choose boot disk for VM (in ths case . Debian install image from NFS):
+#   xe cd-list
+#    xe vm-cd-add vm="newVM" cd-name="debian-7.0.0-i386-netinst.iso" device=3
+#    xe vbd-list vm-name-label="newVM" userdevice=3
+#    xe vbd-param-set  uuid=[device uuid] bootable=true
+#    xe vm-param-set uuid=[VM uuid] other-config:install-repository=cdrom
+
+
 phelp() {
-	echo "  Script for automatic Virtual Machine creation for ESX"
+	echo "  Script for automatic Virtual Machine creation for XenServer"
 	echo "  Usage: `basename $0` options: -n -l -d <|-c|-i|-r|-s|-e|-g|-a|-v|-h>"
 	echo "  -n: Name of VM (required)"
 	echo "  -l: VM Network to connect (required)"
@@ -77,7 +82,7 @@ ISO=""
 FLAG=true
 ERR=false
 NICTYPE=e1000
-GUESTOS=ubuntu
+GUESTOS='Ubuntu Trusty Tahr 14.04'
 HWVER=08 ## Can be 08-11 Hey look... it goes up to 11!
 SCSIADAPTER=lsisas1068
 NUMNICS=1
@@ -174,7 +179,6 @@ do
 	  MSG="$MSG | Please make sure to enter a valid VM Network name."
 	fi
 	;;
-
    a)
 	SCSIADAPTER=${OPTARG}
 	FLAG=false;
@@ -191,28 +195,30 @@ do
 	  ERR=true
 	  MSG="$MSG | Please make sure to enter a valid Guest OS name."
 	elif [ "$GUESTOS" == "win7" ]; then
-	  GUESTOS=windows7-64
+	  GUESTOS='Windows 7 (64-bit)'
           FLAG=false
 	elif [ "$GUESTOS" == "2008r2" ]; then
-	  GUESTOS=windows7srv-64
+	  GUESTOS='Windows Server 2008 R2 (64-bit)'
           FLAG=false
 	elif [ "$GUESTOS" == "win8" ]; then
-	  GUESTOS=windows8-64
+	  GUESTOS='Windows 8 (64-bit)'
           FLAG=false
 	  HWVER=09
 	elif [ "$GUESTOS" == "2012r2" ]; then
-	  GUESTOS=windows8srv-64
+	  GUESTOS='Windows Server 2012 R2 (64-bit)'
           FLAG=false
 	  HWVER=09
 	elif [ "$GUESTOS" == "ubuntu" ]; then
-	  GUESTOS=ubuntu64Guest
+	  GUESTOS='Ubuntu Trusty Tahr 14.04'
           FLAG=false
-	elif [ "$GUESTOS" == "esx5" ]; then
-	  GUESTOS=vmkernel5Guest
-          FLAG=false
-	elif [ "$GUESTOS" == "esx6" ]; then
-	  GUESTOS=vmkernel6Guest
-          FLAG=false
+### You can't nest ESX inside XenServer without hacking around so this is unsupported
+### Tech: Xenserver emulates RTL8139 which *can* be injected, but again, unsupported
+##	elif [ "$GUESTOS" == "esx5" ]; then
+##          GUESTOS=vmkernel5Guest
+##          FLAG=false
+##	elif [ "$GUESTOS" == "esx6" ]; then
+##          GUESTOS=vmkernel6Guest
+##          FLAG=false
 	## copy the 3 lines above to add in more guest support as needed
 	else
 	  ERR=true
@@ -252,60 +258,31 @@ if $ERR; then
   exit 1
 fi
 
-if [ -d "/vmfs/volumes/$DATASTORE/$NAME" ]; then
-  echo "Directory - ${NAME} already exists, can't recreate it."
-  exit
-fi
+# Xen creates an LV rather than folder with VM in it.
+#if [ -d "/vmfs/volumes/$DATASTORE/$NAME" ]; then
+#  echo "Directory - ${NAME} already exists, can't recreate it."
+#  exit
+#fi
+
+### Here, we start creating the VM ###
+## After selecting template, create VM, Xen works by creating the VM and adding
+## hardware to it. Make this a variable as we use UUID later to add stuff to VM
+UUID=`xe vm-install template="${GUESTOS}" new-name-label="${NAME}"`
+echo "$UUID"
 
 ## Creating the folder for the Virtual Machine
-mkdir /vmfs/volumes/${DATASTORE}/${NAME}
+#mkdir /vmfs/volumes/${DATASTORE}/${NAME}
 
-## Creating the actual Virtual Disk file (the HDD) with vmkfstools
-vmkfstools -c "${SIZE}"G /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmdk
+## Bump the disk size. To check: xe vm-disk-list vm="newVM"
+DISKUUID=`xe vm-disk-list vm="${NAME}" | egrep '(VDI|uuid)' | tail -n1 | awk '{ print $NF }'`
+echo "${SIZE}"
+xe vdi-resize uuid="${DISKUUID}" disk-size="${SIZE}"GiB
 
-## Creating the config file
-touch /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmx
+## Bump the RAM size to requested size
+## Check it out with: xe vm-list name-label="newVM" params=all | grep memory
+## This needs to be based on template list
+xe vm-memory-limits-set dynamic-max=${RAM}MiB dynamic-min=${RAM}MiB static-max=${RAM}MiB static-min=${RAM}MiB name-label="${NAME}"
 
-## Writing information into the configuration file
-cat << EOF > /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmx
-
-config.version = "9"
-virtualHW.version = "7"
-vmci0.present = "TRUE"
-displayName = "${NAME}"
-floppy0.present = "FALSE"
-numvcpus = "${CPU}"
-scsi0.present = "TRUE"
-scsi0.sharedBus = "none"
-scsi0.virtualDev = "${SCSIDAPTER}"
-memsize = "${RAM}"
-scsi0:0.present = "TRUE"
-scsi0:0.fileName = "${NAME}.vmdk"
-scsi0:0.deviceType = "scsi-hardDisk"
-ide1:0.present = "TRUE"
-ide1:0.fileName = "${ISO}"
-ide1:0.deviceType = "cdrom-image"
-pciBridge0.present = "TRUE"
-pciBridge4.present = "TRUE"
-pciBridge4.virtualDev = "pcieRootPort"
-pciBridge4.functions = "8"
-pciBridge5.present = "TRUE"
-pciBridge5.virtualDev = "pcieRootPort"
-pciBridge5.functions = "8"
-pciBridge6.present = "TRUE"
-pciBridge6.virtualDev = "pcieRootPort"
-pciBridge6.functions = "8"
-pciBridge7.present = "TRUE"
-pciBridge7.virtualDev = "pcieRootPort"
-pciBridge7.functions = "8"
-guestOS = "${GUESTOS}"
-bios.bootDelay = "50"
-ethernet0.pciSlotNumber = "32"
-ethernet0.present = "TRUE"
-ethernet0.virtualDev = "${NICTYPE}"
-ethernet0.networkName = "${VMNETWORK}"
-ethernet0.generatedAddressOffset = "0"
-EOF
 
 ## Add the requested number of NICs to the VM. i'm not letting you add more
 ## than nine because that's just silly. You can change it of course. If you
@@ -316,32 +293,51 @@ EOF
 ## not allow user to specify less than 2 NICs 
 NIC=1
 
-while [[ "$NIC" -lt "$NUMNICS" ]] ; do
-##echo "$NIC"
-##echo "$NIC"
-## Update the VMX file. This is why I put the NICs last
-##exit 0
+## TODO: Re-instate number of NICs so this loop needs some work
+###while [[ "$NIC" -lt "$NUMNICS" ]] ; do
+###echo "$NIC"
+###echo "$NIC"
+### Update the VMX file. This is why I put the NICs last
+###exit 0
+#
+#cat << EOF >> /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmx
+#ethernet${NIC}.present = "TRUE"
+#ethernet${NIC}.virtualDev = "${NICTYPE}"
+#ethernet${NIC}.networkName = "${VMNETWORK}"
+#ethernet${NIC}.generatedAddressOffset = "0"
+#EOF
 
-cat << EOF >> /vmfs/volumes/${DATASTORE}/$NAME/$NAME.vmx
-ethernet${NIC}.present = "TRUE"
-ethernet${NIC}.virtualDev = "${NICTYPE}"
-ethernet${NIC}.networkName = "${VMNETWORK}"
-ethernet${NIC}.generatedAddressOffset = "0"
-EOF
+## Get network interface list on host: xe network-list
+## Generate a MAC using Xen's prefix for easy DHCP management
+MAC=`hexchars="0123456789ABCDEF" ; end=$( for i in {1..6} ; do echo -n ${hexchars:$(( $RANDOM % 16 )):1} ; done | sed -e 's/\(..\)/:\1/g' ) ; echo 00:16:3e$end`
+
+## Add physical network interface to VM:
+## xe network-list we need to make this do logic check too, and not always use xenbr0
+
+## This code is something else... If only Xenserver allowed you to print info only one
+## virtual switch without all this!
+NETUUID=` xe network-list | egrep '(uuid|bridge)' | sed 's/  //g' | sed 's/\<bridge\>//g' |  tr -d '\n( RO)' | sed 's/uuid:/\'$'\n/g' | grep ${VMNETWORK} | awk --field-separator=: '{ print $1 }' `
+## Now we can add the NIC to the VM, with our UUID, MAC Address and Network UUID
+xe vif-create vm-uuid=${UUID} network-uuid=${NETUUID} mac=${MAC} device=0
 
 # Bump NIC by +1 and carry on
-NIC=`echo $(($NIC+1))`
-done
+##NIC=`echo $(($NIC+1))`
+##done
 
-## Adding Virtual Machine to VM register - modify your path accordingly!!
-MYVM=`vim-cmd solo/registervm /vmfs/volumes/${DATASTORE}/${NAME}/${NAME}.vmx`
-
-## Upgrade the hardware version, but stick with HW version 8 since 9+ expects
-## the WebUI VSpehre client (urgh!) except if it's Win8 or 2012.
-vim-cmd vmsvc/upgrade $MYVM vmx-$HWVER
+## Tweak boot order to be Network, HDD (C:) and Disk (D:)
+xe vm-param-set HVM-boot-policy="ncd" uuid=${UUID}
 
 ## Powering up virtual machine:
-vim-cmd vmsvc/power.on $MYVM
+xe vm-start vm=${NAME}
+
+## For those without XenCentre console, one can connect to VM console using VNC
+## retrieve VM domain number:
+xe vm-param-list uuid=${UUID}| grep dom-id
+##    retrieve VNC port for this domain:
+xenstore-read /local/domain/${NAME}/console/vnc-port
+
+## remote connection ([port] . last two digits from previous output):
+#   vncviewer -via root@[xenserver] localhost:[port]
 
 echo
 echo "The Virtual Machine is now setup & the VM has been started up. Your have the following configuration:"

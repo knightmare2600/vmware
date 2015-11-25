@@ -18,6 +18,7 @@
 #                                     compatible lsisas1068 as default     #
 # Updated 10 Jun 2015 robertmc        Allow 1-9 NICs at build time         #
 # Updated 12 Jul 2015 robertmc        Check Datastore path for existing VM #
+# Updated 25 Nov 2015 robertmc        Fix for Ubuntu guests on VSphere 6.x #
 #                                                                          #
 ############################################################################
 
@@ -205,7 +206,7 @@ do
           FLAG=false
 	  HWVER=09
 	elif [ "$GUESTOS" == "ubuntu" ]; then
-	  GUESTOS=ubuntu64Guest
+	  GUESTOS=ubuntu-64
           FLAG=false
 	elif [ "$GUESTOS" == "esx5" ]; then
 	  GUESTOS=vmkernel5Guest

@@ -31,6 +31,23 @@ e.g. create.sh -n MyVM -l 'Protected' -d Store1 -c 1 -r 1024 -s 5 -e 2 -g win8 -
 
 The script will automatically upgrade the hardware to a version compatible with the Guest OS.
 
+The `foreman_macgen.diff` is used for those working with foreman for provisioning, but not using VCentre. This small patch can generate MAC addresses so VMs do not foul on creation. Not my work, so full credit goes to Alexander Fisher at https://groups.google.com/forum/#!topic/foreman-users/izf_3zRE5WQ for this code.
+
+Usage:
+
+```
+knightmare@foreman[~]$ sudo updatedb
+knightmare@foreman[~]$ sudo locate create_vm.rb
+/usr/share/foreman/vendor/ruby/1.9.1/gems/fog-1.32.0/lib/fog/ovirt/requests/compute/create_vm.rb
+/usr/share/foreman/vendor/ruby/1.9.1/gems/fog-1.32.0/lib/fog/vsphere/requests/compute/create_vm.rb
+/usr/share/foreman/vendor/ruby/1.9.1/gems/fog-softlayer-1.0.2/lib/fog/softlayer/requests/compute/create_vm.rb
+/usr/share/foreman/vendor/ruby/1.9.1/gems/rbvmomi-1.8.2/examples/create_vm.rb
+knightmare@foreman[~]$ cd /usr/share/foreman/vendor/ruby/1.9.1/gems/fog-1.32.0/lib/fog/vsphere/requests/compute/
+knightmare@foreman[compute]$ patch < foreman_macgen.diff
+```
+
+You can now add an ESXi instance and generate MACs. There is a 1 in 65536 chance of it using VMware's OID, but you can generate another one.
+
 ##Notes
 This code has been tested on VMWare ESX 5.5 and ESX 6.0. Due to limitations in the ash shell of ESX, some of the code is not as clean as it could be. However, it is documented and is fairly clean.
 
@@ -43,5 +60,7 @@ http://www.virtuallyghetto.com/2013/10/quick-tip-using-cli-to-upgrade-to.html
 
 http://www.doublecloud.org/2013/11/vmware-esxi-vim-cmd-command-a-quick-tutorial/
 
+https://groups.google.com/forum/#!topic/foreman-users/izf_3zRE5WQ
+
 ##Authors
-Created by Tamas Piros and upgraded by knightmare2600
+Created by Tamas Piros and Alexander Fisher respectively, and upgraded by knightmare2600

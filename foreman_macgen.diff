@@ -1,0 +1,23 @@
+--- create_vm.rb.orig   2015-02-08 21:00:00.649826556 +0000
++++ create_vm.rb        2015-02-08 21:00:35.615826533 +0000
+@@ -77,10 +77,18 @@
+                   :summary => nic.summary,
+                 },
+               :backing     => create_nic_backing(nic, attributes),
+-              :addressType => 'generated')
++              :addressType => 'Manual',
++              :macAddress => randommac())
+           }
+         end
+
++        def randommac()
++          mac_octets = (1..6).collect { rand(256) }
++          mac_octets[0] = 0x00
++          format = '%02X'
++          mac_octets.collect { |i| format % [i] }.join(':')
++        end
++
+         def create_controller options=nil
+           options=if options
+                     controller_default_options.merge(Hash[options.map{|k,v| [k.to_sym,v] }]) 
+
